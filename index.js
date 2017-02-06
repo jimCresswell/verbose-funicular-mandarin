@@ -190,9 +190,9 @@ function summarise (data) {
  * @return {Number}                   Points scored.
  */
 function calcPoints (eventAbbreviation, result) {
-  const eventConfig = eventsConfig[eventAbbreviation];
-  const eventType = eventConfig.type;
-  const weights = eventConfig.weights;
+  var eventConfig = eventsConfig[eventAbbreviation];
+  var eventType = eventConfig.type;
+  var weights = eventConfig.weights;
 
   return calcPointsByType[eventType](result, weights.A, weights.B, weights.C);
 }
@@ -205,10 +205,10 @@ function calcPoints (eventAbbreviation, result) {
  */
 function addPoints (data) {
   data.forEach((row) => {
-    const eventAbbreviation = row[fields.event];
-    const result = row[fields.result];
+    var eventAbbreviation = row[fields.event];
+    var result = row[fields.result];
 
-    const points = calcPoints(eventAbbreviation, result);
+    var points = calcPoints(eventAbbreviation, result);
 
     row.push(points);
   });
@@ -293,11 +293,11 @@ if (calledFromCommandLine) {
   // The conditional require is because of the one
   // file restriction, I would normally use a
   // separate module for each piece of functionality.
-  const fs = require('fs');
+  var fs = require('fs');
 
   // Set input file path from passed parameters
   // or use default.
-  const filePath = process.argv[2] || config.defaultFilePath;
+  var filePath = process.argv[2] || config.defaultFilePath;
 
   // Attempt to read the input file and if sucessful
   // generate and output the summary.
@@ -305,7 +305,7 @@ if (calledFromCommandLine) {
     if (err) {
       onFileReadError(err, filePath);
     } else {
-      const summary = getSummary(csvString, config.newlineRegex, config.csvSeparator);
+      var summary = getSummary(csvString, config.newlineRegex, config.csvSeparator);
       process.stdout.write(summary);
     }
   });
