@@ -38,6 +38,13 @@ const config = {
  * Functionality.
  */
 
+/**
+ * Handle failure to read input data file.
+ *
+ * Exits process.
+ * @param  {Error} err
+ * @param  {String} filePath
+ */
 function onFileReadError (err, filePath) {
   console.error('File "' + filePath + '" could not be read, please review the error message:');
   console.error(err.toString());
@@ -45,8 +52,23 @@ function onFileReadError (err, filePath) {
   process.exit(1);
 }
 
+/**
+ * Map a csv string to a formatted text summary of the data.
+ *
+ * Given a String representation of a csv file containing
+ * heptathlon results in a known format, return a
+ * formatted summary of event scores.
+ * @param  {String} csvString
+ * @param  {Regex} newlineRegex
+ * @param  {String} csvSeparator
+ * @return {String}              The processed score summary.
+ */
 function getSummary (csvString, newlineRegex, csvSeparator) {
-  return csvString;
+  var summary;
+
+  summary = csvString;
+
+  return summary;
 }
 
 
