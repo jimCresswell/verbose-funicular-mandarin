@@ -64,9 +64,21 @@ function onFileReadError (err, filePath) {
  * @return {String}              The processed score summary.
  */
 function getSummary (csvString, newlineRegex, csvSeparator) {
-  var summary;
+  var data, summary;
 
-  summary = csvString;
+  // Split input on platform independent newline.
+  // Remove empty rows.
+  // Extract and sanitise individual values
+  data = csvString
+    .split(newlineRegex)
+    .filter((rowString) => rowString.length > 0)
+    .map((rowString) =>
+      rowString.split(csvSeparator)
+        .map(value => value.trim().toLowerCase())
+    );
+
+  // Null operation.
+  summary = data.join('\n');
 
   return summary;
 }
