@@ -23,10 +23,14 @@ const calledFromCommandLine = (require.main === module);
 const config = {
   defaultFilePath: 'heptathlon.csv',
   newlineRegex: /\n|\r\n|\r/,
-  csvSeparator: ','
+  csvSeparator: ',',
+  outputWidth: 20
 };
 
 const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// CSV field label to index.
+const fields = {athlete: 0, event: 1, result: 2, date: 3, points: 4};
 
 /**
  * Athletic event type and point weightings for each event.
@@ -80,10 +84,10 @@ function formatSummary (summary) {
   // Get an array of names.
   var names = Object.keys(summary.names);
 
-  summary.forEach(function (day, index) {
+  summary.forEach(function (day, dayCounter) {
     // Construct the day label while we have access to the date.
     var date = day.date;
-    var dayLabel = 'Day ' + (index + 1) + ': ' +
+    var dayLabel = 'Day ' + (dayCounter + 1) + ': ' +
       leftPadDate(date.getUTCDate()) + ' ' +
       monthAbbreviations[date.getUTCMonth()] + ' ' +
       date.getFullYear();
@@ -92,7 +96,7 @@ function formatSummary (summary) {
     output.push(' ' + dayLabel);
     output.push('--------------------');
 
-    // Sort scores.
+    // Store names with scores and sort by score.
     var scores;
     scores = names.map(name => [name, day[name]]);
     scores.sort((a, b) => b[1] - a[1]);
@@ -101,12 +105,12 @@ function formatSummary (summary) {
     scores.forEach(function (score) {
       var name = score[0].toUpperCase();
       var points = score[1].toString();
-      var scorePadding = ' '.repeat(20 - (name.length + points.length));
+      var scorePadding = ' '.repeat(config.outputWidth - (name.length + points.length));
       output.push(name + scorePadding + points);
     });
 
     // Newline between day summaries.
-    if (index < summary.length - 1) {
+    if (dayCounter < summary.length - 1) {
       output.push('');
     }
   });
@@ -126,15 +130,15 @@ function summarise (data) {
   var names = [];
 
   // Ensure data in date order.
-  data.sort((a, b) => a[3].getTime() - b[3].getTime());
+  data.sort((a, b) => a[fields.date].getTime() - b[fields.date].getTime());
 
-  var currentDate = data[0][3];
+  var currentDate = data[fields.athlete][fields.date];
 
   // Convert from input data to a day by day summary of points.
   data.forEach(function (row) {
-    var athlete = row[0];
-    var eventDate = row[3];
-    var points = row[4];
+    var athlete = row[fields.athlete];
+    var eventDate = row[fields.date];
+    var points = row[fields.points];
 
     // Store the names given to date for use
     // in calculating cumulative scores.
@@ -201,8 +205,8 @@ function calcPoints (eventAbbreviation, result) {
  */
 function addPoints (data) {
   data.forEach((row) => {
-    const eventAbbreviation = row[1];
-    const result = row[2];
+    const eventAbbreviation = row[fields.event];
+    const result = row[fields.result];
 
     const points = calcPoints(eventAbbreviation, result);
 
