@@ -1,0 +1,30 @@
+{
+  "name": "verbose-funicular-mandarin",
+  "version": "0.1.0",
+  "description": "The sky above the port was the color of television, tuned to a dead channel.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "engines": {
+    "node": ">=7.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jimCresswell/verbose-funicular-mandarin.git"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/jimCresswell/verbose-funicular-mandarin/issues"
+  },
+  "homepage": "https://github.com/jimCresswell/verbose-funicular-mandarin#readme",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
+    "eslint": "^3.14.1",
+    "eslint-config-standard": "^6.2.1",
+    "eslint-plugin-promise": "^3.4.0",
+    "eslint-plugin-standard": "^2.0.1"
+  }
+}
