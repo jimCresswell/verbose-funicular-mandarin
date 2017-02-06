@@ -1,19 +1,18 @@
 /**
 * Command line utility for calculating heptathlon cummulative scores given known format input.
 *
-* Exposes some functionality as a module for testing.
+* Exposes some functionality as a module for testing. In real life I'd break this up into
+* multiple modules to ease unit testing and separate types of functionality.
 *
 * File structure:
 *   - Configuration including determining whether the module was called from the command line.
 *   - Definition of functionality.
-*   - Calling of command line functionality if called from command line.
+*   - Conditoinal execution of command line functionality.
 *   - Exposure of an interface for testing.
 */
 
 
-/*
- * Configuration
- */
+/* === Configuration === */
 
 // Determine if called from command line or required
 // as a module, allowing command line functionality
@@ -30,7 +29,7 @@ const config = {
 const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * Event type and point weightings for each event.
+ * Athletic event type and point weightings for each event.
  * @type {Object}
  */
 const eventsConfig = {
@@ -45,6 +44,8 @@ const eventsConfig = {
 
 /**
  * For a given event type and result calculate the score.
+ *
+ * Opted to put this with config because it is closely related to `eventsConfig`.
  * @type {Object}
  */
 const calcPointsByType = {
@@ -54,87 +55,71 @@ const calcPointsByType = {
 };
 
 
-/*
- * Functionality.
- */
+/* === Functionality. === */
 
 /**
- * Handle failure to read input data file.
- *
- * Exits process.
- * @param  {Error} err
- * @param  {String} filePath
+ * Add a leading zero to the day of the month if it is a single digit.
+ * @param  {Number} dayOfMonth
+ * @return {String}            Padded day of month.
  */
-function onFileReadError (err, filePath) {
-  console.error('File "' + filePath + '" could not be read, please review the error message:');
-  console.error(err.toString());
-  console.error('Exiting...');
-  process.exit(1);
+function leftPadDate (dayOfMonth) {
+  dayOfMonth = String(dayOfMonth);
+  if (dayOfMonth.length < 2) {
+    return '0' + dayOfMonth;
+  }
+  return dayOfMonth;
 }
 
 /**
- * Given input values taken from a data table of known format parse those values.
- *
- * @param  {String} value The value taken from the input data table.
- * @param  {Number} index The column in the input data table.
- * @return {String|Number|Date}       The parsed value.
+ * [formatSummary description]
+ * @param  {Object} summary The daily cumulative points.
+ * @return {String}         A string representation of the summary.
  */
-function parseValues (value, index) {
-  // Remove leading and trailing white space and capitalisation.
-  value = value.trim().toLowerCase();
+function formatSummary (summary) {
+  var output = [];
+  // Get an array of names.
+  var names = Object.keys(summary.names);
 
-  // Process values, either a single number or minute:second format.
-  if (index === 2) {
-    value = value.split(':');
-    if (value.length === 2) {
-      // Convert minutes and seconds to seconds.
-      value = parseFloat(value[1]) + parseFloat(value[0]) * 60;
-    } else {
-      value = parseFloat(value[0]);
+  summary.forEach(function (day, index) {
+    // Construct the day label while we have access to the date.
+    var date = day.date;
+    var dayLabel = 'Day ' + (index + 1) + ': ' +
+      leftPadDate(date.getUTCDate()) + ' ' +
+      monthAbbreviations[date.getUTCMonth()] + ' ' +
+      date.getFullYear();
+
+    output.push('--------------------');
+    output.push(' ' + dayLabel);
+    output.push('--------------------');
+
+    // Sort scores.
+    var scores;
+    scores = names.map(name => [name, day[name]]);
+    scores.sort((a, b) => b[1] - a[1]);
+
+    // Add scores to output.
+    scores.forEach(function (score) {
+      var name = score[0].toUpperCase();
+      var points = score[1].toString();
+      var scorePadding = ' '.repeat(20 - (name.length + points.length));
+      output.push(name + scorePadding + points);
+    });
+
+    // Newline between day summaries.
+    if (index < summary.length - 1) {
+      output.push('');
     }
-  }
-
-  // Get date.
-  if (index === 3) {
-    // Time of day not required so discard, ensuring
-    // that Date treats string as UTC.
-    value = new Date(value.split(' ')[0]);
-  }
-
-  return value;
-}
-
-/**
- * Given an event type and a result, calculate the points.
- * @param  {String} eventAbbreviation
- * @param  {Number} result            Event result.
- * @return {Number}                   Points scored.
- */
-function calcPoints (eventAbbreviation, result) {
-  const eventConfig = eventsConfig[eventAbbreviation];
-  const eventType = eventConfig.type;
-  const weights = eventConfig.weights;
-
-  return calcPointsByType[eventType](result, weights.A, weights.B, weights.C);
-}
-
-/**
- * Modify the data to include the points scored in each event.
- *
- * @param  {Object} data
- * @return {Object} The modified data object.
- */
-function addPoints (data) {
-  data.forEach((row) => {
-    const eventAbbreviation = row[1];
-    const result = row[2];
-    const points = calcPoints(eventAbbreviation, result);
-    row.push(points);
   });
 
-  return data;
+  return output.join('\n');
 }
 
+/**
+ * Map the parsed input csv data to a daily summary of cumulative points.
+ *
+ * @param  {Object} data Input parsed csv data.
+ * @return {Object}      Daily summary of cumulative points.
+ */
 function summarise (data) {
   var summary = [];
   var dayCounter = 0;
@@ -194,51 +179,69 @@ function summarise (data) {
   return summary;
 }
 
-function leftPadDate (date) {
-  date = String(date);
-  if (date.length < 2) {
-    return '0' + date;
-  }
-  return date;
+/**
+ * Given an event type and a result, calculate the points.
+ * @param  {String} eventAbbreviation
+ * @param  {Number} result            Event result.
+ * @return {Number}                   Points scored.
+ */
+function calcPoints (eventAbbreviation, result) {
+  const eventConfig = eventsConfig[eventAbbreviation];
+  const eventType = eventConfig.type;
+  const weights = eventConfig.weights;
+
+  return calcPointsByType[eventType](result, weights.A, weights.B, weights.C);
 }
 
-function formatSummary (summary) {
-  var output = [];
-  // Get an array of names.
-  var names = Object.keys(summary.names);
+/**
+ * Modify the data to include the points scored in each event.
+ *
+ * @param  {Object} data
+ * @return {Object} The modified data object.
+ */
+function addPoints (data) {
+  data.forEach((row) => {
+    const eventAbbreviation = row[1];
+    const result = row[2];
 
-  summary.forEach(function (day, index) {
-    // Construct the day label while we have access to the date.
-    var date = day.date;
-    var dayLabel = 'Day ' + (index + 1) + ': ' +
-      leftPadDate(date.getUTCDate()) + ' ' +
-      monthAbbreviations[date.getUTCMonth()] + ' ' +
-      date.getFullYear();
+    const points = calcPoints(eventAbbreviation, result);
 
-    output.push('--------------------');
-    output.push(' ' + dayLabel);
-    output.push('--------------------');
-
-    // Sort scores.
-    var scores;
-    scores = names.map(name => [name, day[name]]);
-    scores.sort((a, b) => b[1] - a[1]);
-
-    // Add scores to output.
-    scores.forEach(function (score) {
-      var name = score[0].toUpperCase();
-      var points = score[1].toString();
-      var scorePadding = ' '.repeat(20 - (name.length + points.length));
-      output.push(name + scorePadding + points);
-    });
-
-    // Newline between day summaries.
-    if (index < summary.length - 1) {
-      output.push('');
-    }
+    row.push(points);
   });
 
-  return output.join('\n');
+  return data;
+}
+
+/**
+ * Given input values taken from a data table of known format parse those values.
+ *
+ * @param  {String} value The value taken from the input data table.
+ * @param  {Number} index The column in the input data table.
+ * @return {String|Number|Date}       The parsed value.
+ */
+function parseValues (value, index) {
+  // Remove leading and trailing white space and capitalisation.
+  value = value.trim().toLowerCase();
+
+  // Process values, either a single number or minute:second format.
+  if (index === 2) {
+    value = value.split(':');
+    if (value.length === 2) {
+      // Convert minutes and seconds to seconds.
+      value = parseFloat(value[1]) + parseFloat(value[0]) * 60;
+    } else {
+      value = parseFloat(value[0]);
+    }
+  }
+
+  // Get date.
+  if (index === 3) {
+    // Time of day not required so discard, ensuring
+    // that Date treats string as UTC.
+    value = new Date(value.split(' ')[0]);
+  }
+
+  return value;
 }
 
 /**
@@ -265,11 +268,23 @@ function getSummary (csvString, newlineRegex, csvSeparator) {
 }
 
 
-/*
- * Command line operations.
+/**
+ * Handle failure to read input data file.
+ *
+ * Exits process.
+ * @param  {Error} err
+ * @param  {String} filePath
  */
+function onFileReadError (err, filePath) {
+  console.error('File "' + filePath + '" could not be read, please review the error message:');
+  console.error(err.toString());
+  console.error('Exiting...');
+  process.exit(1);
+}
 
-// Conditionally execute command line functionality.
+
+/* === Command line operations. Executed conditionally. === */
+
 if (calledFromCommandLine) {
   // The conditional require is because of the one
   // file restriction, I would normally use a
@@ -293,9 +308,7 @@ if (calledFromCommandLine) {
 }
 
 
-/*
- * Expose interface for testing.
- */
+/* === Expose interface for testing. === */
 
 module.exports = {
   getSummary: getSummary,
