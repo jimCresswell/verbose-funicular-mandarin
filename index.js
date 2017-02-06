@@ -27,11 +27,13 @@ const config = {
   csvSeparator: ','
 };
 
+const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 /**
  * Event type and point weightings for each event.
  * @type {Object}
  */
-const eventConfig = {
+const eventsConfig = {
   '200m': { type: 'running', weights: { A: 4.99087, B: 42.5, C: 1.81 } },
   '800m': { type: 'running', weights: { A: 0.11193, B: 254, C: 1.88 } },
   '100m': { type: 'running', weights: { A: 9.23076, B: 26.7, C: 1.835 } },
@@ -45,7 +47,7 @@ const eventConfig = {
  * For a given event type and result calculate the score.
  * @type {Object}
  */
-const calcScores = {
+const calcPointsByType = {
   running: (result, A, B, C) => Math.floor(A * Math.pow((B - result), C)),
   throwing: (result, A, B, C) => Math.floor(A * Math.pow((result - B), C)),
   jumping: (result, A, B, C) => Math.floor(A * Math.pow(((result * 100) - B), C))
@@ -78,41 +80,165 @@ function onFileReadError (err, filePath) {
  * @return {String|Number|Date}       The parsed value.
  */
 function parseValues (value, index) {
-  var eventType;
-
   // Remove leading and trailing white space and capitalisation.
   value = value.trim().toLowerCase();
 
-  // Get the event type.
-  if (index === 1) {
-    eventType = eventConfig[value].type;
-  }
-
-  // Format result according to event type.
+  // Process values, either a single number or minute:second format.
   if (index === 2) {
-    if (eventType === 'throwing' || eventType === 'jumping') {
-      // Distance in metres.
-      value = parseFloat(value);
+    value = value.split(':');
+    if (value.length === 2) {
+      // Convert minutes and seconds to seconds.
+      value = parseFloat(value[1]) + parseFloat(value[0]) * 60;
     } else {
-      // Running. Time in second or minute:second format.
-      value = value.split(':');
-      if (value.length === 2) {
-        value = parseFloat(value[1]) + parseFloat(value[0]) * 60;
-      } else {
-        value = parseFloat(value[0]);
-      }
+      value = parseFloat(value[0]);
     }
   }
 
   // Get date.
   if (index === 3) {
-    // Time of day not required so discard,
-    // ensuring that Date treats string
-    // as UTC.
+    // Time of day not required so discard, ensuring
+    // that Date treats string as UTC.
     value = new Date(value.split(' ')[0]);
   }
 
   return value;
+}
+
+/**
+ * Given an event type and a result, calculate the points.
+ * @param  {String} eventAbbreviation
+ * @param  {Number} result            Event result.
+ * @return {Number}                   Points scored.
+ */
+function calcPoints (eventAbbreviation, result) {
+  const eventConfig = eventsConfig[eventAbbreviation];
+  const eventType = eventConfig.type;
+  const weights = eventConfig.weights;
+
+  return calcPointsByType[eventType](result, weights.A, weights.B, weights.C);
+}
+
+/**
+ * Modify the data to include the points scored in each event.
+ *
+ * @param  {Object} data
+ * @return {Object} The modified data object.
+ */
+function addPoints (data) {
+  data.forEach((row) => {
+    const eventAbbreviation = row[1];
+    const result = row[2];
+    const points = calcPoints(eventAbbreviation, result);
+    row.push(points);
+  });
+
+  return data;
+}
+
+function summarise (data) {
+  var summary = [];
+  var dayCounter = 0;
+  var names = [];
+
+  // Ensure data in date order.
+  data.sort((a, b) => a[3].getTime() - b[3].getTime());
+
+  var currentDate = data[0][3];
+
+  // Convert from input data to a day by day summary of points.
+  data.forEach(function (row) {
+    var athlete = row[0];
+    var eventDate = row[3];
+    var points = row[4];
+
+    // Store the names given to date for use
+    // in calculating cumulative scores.
+    names[athlete] = true;
+
+    // Check if next day of events have started.
+    if (currentDate.getTime() !== eventDate.getTime()) {
+      currentDate = eventDate;
+      dayCounter++;
+    }
+
+    // Make sure an objects for that days events exists.
+    summary[dayCounter] = summary[dayCounter] || {};
+
+    // Store the date.
+    summary[dayCounter].date = currentDate;
+
+    // If no score exists for the day create it.
+    summary[dayCounter][athlete] = summary[dayCounter][athlete] || 0;
+
+    // Add the score for this event to the total for this day.
+    summary[dayCounter][athlete] += points;
+  });
+
+  // Store the names on the summary array object.
+  summary.names = names;
+
+  // Make the scores for each day cumulative.
+  Object.keys(names).forEach(function (name) {
+    summary.forEach(function (day, index, summary) {
+      var previousDay;
+
+      // Make sure a score exists for each name.
+      day[name] = day[name] || 0;
+      if (index > 0) {
+        previousDay = summary[index - 1];
+        day[name] += previousDay[name];
+      }
+    });
+  });
+
+  return summary;
+}
+
+function leftPadDate (date) {
+  date = String(date);
+  if (date.length < 2) {
+    return '0' + date;
+  }
+  return date;
+}
+
+function formatSummary (summary) {
+  var output = [];
+  // Get an array of names.
+  var names = Object.keys(summary.names);
+
+  summary.forEach(function (day, index) {
+    // Construct the day label while we have access to the date.
+    var date = day.date;
+    var dayLabel = 'Day ' + (index + 1) + ': ' +
+      leftPadDate(date.getUTCDate()) + ' ' +
+      monthAbbreviations[date.getUTCMonth()] + ' ' +
+      date.getFullYear();
+
+    output.push('--------------------');
+    output.push(' ' + dayLabel);
+    output.push('--------------------');
+
+    // Sort scores.
+    var scores;
+    scores = names.map(name => [name, day[name]]);
+    scores.sort((a, b) => b[1] - a[1]);
+
+    // Add scores to output.
+    scores.forEach(function (score) {
+      var name = score[0].toUpperCase();
+      var points = score[1].toString();
+      var scorePadding = ' '.repeat(20 - (name.length + points.length));
+      output.push(name + scorePadding + points);
+    });
+
+    // Newline between day summaries.
+    if (index < summary.length - 1) {
+      output.push('');
+    }
+  });
+
+  return output.join('\n');
 }
 
 /**
@@ -127,20 +253,15 @@ function parseValues (value, index) {
  * @return {String}              The processed score summary.
  */
 function getSummary (csvString, newlineRegex, csvSeparator) {
-  var data, summary;
-
   // Split input on platform independent newline.
   // Remove empty rows.
   // Extract and sanitise individual values
-  data = csvString
+  var data = csvString
     .split(newlineRegex)
     .filter((rowString) => rowString.length > 0)
     .map((rowString) => rowString.split(csvSeparator).map(parseValues));
 
-  // Null operation.
-  summary = data.join('\n');
-
-  return summary;
+  return formatSummary(summarise(addPoints(data)));
 }
 
 
@@ -178,6 +299,7 @@ if (calledFromCommandLine) {
 
 module.exports = {
   getSummary: getSummary,
-  eventConfig: eventConfig,
-  calcScores: calcScores
+  appConfig: config,
+  eventsConfig: eventsConfig,
+  calcPoints: calcPoints
 };
