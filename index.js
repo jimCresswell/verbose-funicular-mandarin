@@ -27,13 +27,6 @@ const config = {
   csvSeparator: ','
 };
 
-// const fieldIndex = {
-//   athlete: 0,
-//   competition: 1,
-//   result: 2,
-//   datetime: 3
-// };
-
 /**
  * Event type and point weightings for each event.
  * @type {Object}
@@ -78,6 +71,51 @@ function onFileReadError (err, filePath) {
 }
 
 /**
+ * Given input values taken from a data table of known format parse those values.
+ *
+ * @param  {String} value The value taken from the input data table.
+ * @param  {Number} index The column in the input data table.
+ * @return {String|Number|Date}       The parsed value.
+ */
+function parseValues (value, index) {
+  var eventType;
+
+  // Remove leading and trailing white space and capitalisation.
+  value = value.trim().toLowerCase();
+
+  // Get the event type.
+  if (index === 1) {
+    eventType = eventConfig[value].type;
+  }
+
+  // Format result according to event type.
+  if (index === 2) {
+    if (eventType === 'throwing' || eventType === 'jumping') {
+      // Distance in metres.
+      value = parseFloat(value);
+    } else {
+      // Running. Time in second or minute:second format.
+      value = value.split(':');
+      if (value.length === 2) {
+        value = parseFloat(value[1]) + parseFloat(value[0]) * 60;
+      } else {
+        value = parseFloat(value[0]);
+      }
+    }
+  }
+
+  // Get date.
+  if (index === 3) {
+    // Time of day not required so discard,
+    // ensuring that Date treats string
+    // as UTC.
+    value = new Date(value.split(' ')[0]);
+  }
+
+  return value;
+}
+
+/**
  * Map a csv string to a formatted text summary of the data.
  *
  * Given a String representation of a csv file containing
@@ -97,10 +135,7 @@ function getSummary (csvString, newlineRegex, csvSeparator) {
   data = csvString
     .split(newlineRegex)
     .filter((rowString) => rowString.length > 0)
-    .map((rowString) =>
-      rowString.split(csvSeparator)
-        .map(value => value.trim().toLowerCase())
-    );
+    .map((rowString) => rowString.split(csvSeparator).map(parseValues));
 
   // Null operation.
   summary = data.join('\n');
