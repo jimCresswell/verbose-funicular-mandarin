@@ -8,6 +8,7 @@ module.exports = {
         "promise"
     ],
     "rules": {
-      "semi": ["error", "always"]
+      "semi": ["error", "always"],
+      "no-multiple-empty-lines": ["error", {"max": 2}]
     }
 };
