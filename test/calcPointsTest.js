@@ -1,6 +1,6 @@
 require('chai').should();
 
-var calcPoints = require('../heptathlon/calcPoints');
+var calcPoints = require('../heptathlon/csv/calcPoints');
 
 // Points calculation
 describe('Point scoring', function () {

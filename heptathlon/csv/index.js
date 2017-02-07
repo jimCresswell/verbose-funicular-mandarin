@@ -8,6 +8,7 @@ module.exports = {
 };
 
 var calcPoints = require('./calcPoints');
+var toSummaryString = require('./toSummaryString');
 
 /**
  * Map from field descriptions to indices in data.
@@ -151,6 +152,9 @@ function summarise (data) {
       }
     });
   });
+
+  // Override the Array `toString` method with a summary specific method.
+  summary.toString = toSummaryString;
 
   return summary;
 }

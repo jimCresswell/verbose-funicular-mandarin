@@ -2,7 +2,7 @@
  * Given a summary object, return a formatted string representing that object.
  */
 
-module.exports = getSummaryString;
+module.exports = toSummaryString;
 
 const outputWidth = 20;
 
@@ -10,12 +10,15 @@ const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Au
 
 
 /**
- * Create a formatted string representation of the summary object.
+ * Create a formatted string representation of the parent summary object.
  * @param  {Array} summary The daily cumulative points.
  * @return {String}         A string representation of the summary.
  */
-function getSummaryString (summary) {
+function toSummaryString () {
+  var summary = this;
+
   var output = [];
+
   // Get an array of names.
   var names = Object.keys(summary.names);
 

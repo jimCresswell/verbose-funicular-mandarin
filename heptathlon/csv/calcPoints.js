@@ -2,7 +2,15 @@
  * Points calculating functionality.
  */
 
-module.exports = function calcPoints (eventAbbreviation, result) {
+module.exports = calcPoints;
+
+/**
+ * Given an event type and a result, calculate the points.
+ * @param  {String} eventAbbreviation
+ * @param  {Number} result            Event result.
+ * @return {Number}                   Points scored.
+ */
+function calcPoints (eventAbbreviation, result) {
   var eventConfig = eventsConfig[eventAbbreviation];
   var eventType = eventConfig.type;
   var weights = eventConfig.weights;
@@ -34,10 +42,3 @@ const calcPointsByType = {
   throwing: (result, A, B, C) => Math.floor(A * Math.pow((result - B), C)),
   jumping: (result, A, B, C) => Math.floor(A * Math.pow(((result * 100) - B), C))
 };
-
-/**
- * Given an event type and a result, calculate the points.
- * @param  {String} eventAbbreviation
- * @param  {Number} result            Event result.
- * @return {Number}                   Points scored.
- */

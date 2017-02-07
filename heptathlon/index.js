@@ -7,8 +7,6 @@ module.exports = {
 
 var parse = require('./csv').parse;
 var summarise = require('./csv').summarise;
-var getSummaryString = require('./getSummaryString');
-
 
 /**
  * Map a csv string to a formatted text summary of the data.
@@ -22,5 +20,6 @@ var getSummaryString = require('./getSummaryString');
  * @return {String}              The processed score summary.
  */
 function getSummary (csvString, newlineRegex, csvSeparator) {
-  return getSummaryString(summarise(parse(csvString, newlineRegex, csvSeparator)));
+  var summary = summarise(parse(csvString, newlineRegex, csvSeparator));
+  return summary.toString();
 }
