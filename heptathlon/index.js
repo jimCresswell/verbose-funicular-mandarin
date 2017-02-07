@@ -6,7 +6,7 @@ module.exports = {
 };
 
 var parse = require('./csv').parse;
-var summarise = require('./csv').summarise;
+var summarise = require('./summarise');
 
 /**
  * Map a csv string to a formatted text summary of the data.

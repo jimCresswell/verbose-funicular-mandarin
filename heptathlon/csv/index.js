@@ -3,12 +3,11 @@
  */
 
 module.exports = {
-  parse: parse,
-  summarise: summarise
+  parse: parse
 };
 
 var calcPoints = require('./calcPoints');
-var toSummaryString = require('./toSummaryString');
+
 
 /**
  * Map from field descriptions to indices in data.
@@ -32,13 +31,34 @@ function parse (csvString, newlineRegex, csvSeparator) {
   var data = csvString
     .split(newlineRegex)
     .filter((rowString) => rowString.length > 0)
-    .map((rowString) => rowString.split(csvSeparator).map(parseValues));
+    .map((outcomeString) => getOutcome(outcomeString, csvSeparator));
 
   // Decorate the data with the points for each event.
   data = addPoints(data);
 
+  // Ensure data in date order.
+  data.sort((a, b) => a[fields.date].getTime() - b[fields.date].getTime());
+
+  // Convenience method.
+  data.getFirstDate = function () {
+    return this[0][fields.date];
+  };
+
   return data;
 }
+
+
+function getOutcome (outcomeString, csvSeparator) {
+  var outcome = outcomeString.split(csvSeparator).map(parseValues);
+
+  // Convenience method.
+  outcome.getDetails = function () {
+    return [this[fields.athlete], this[fields.date], this[fields.points]];
+  };
+
+  return outcome;
+}
+
 
 /**
  * Given input values taken from a data table of known format parse those values.
@@ -89,72 +109,4 @@ function addPoints (data) {
 
     return row;
   });
-}
-
-/**
- * Map the parsed input csv data to a daily summary of cumulative points.
- *
- * @param  {Array} data Input parsed csv data.
- * @return {Array}      Daily summary of cumulative points.
- */
-function summarise (data) {
-  var summary = [];
-  var dayCounter = 0;
-  var names = [];
-
-  // Ensure data in date order.
-  data.sort((a, b) => a[fields.date].getTime() - b[fields.date].getTime());
-
-  var currentDate = data[fields.athlete][fields.date];
-
-  // Convert from input data to a day by day summary of points.
-  data.forEach(function (row) {
-    var athlete = row[fields.athlete];
-    var eventDate = row[fields.date];
-    var points = row[fields.points];
-
-    // Store the names given to date for use
-    // in calculating cumulative scores.
-    names[athlete] = true;
-
-    // Check if next day of events have started.
-    if (currentDate.getTime() !== eventDate.getTime()) {
-      currentDate = eventDate;
-      dayCounter++;
-    }
-
-    // Make sure an objects for that days events exists.
-    summary[dayCounter] = summary[dayCounter] || {};
-
-    // Store the date.
-    summary[dayCounter].date = currentDate;
-
-    // If no score exists for the day create it.
-    summary[dayCounter][athlete] = summary[dayCounter][athlete] || 0;
-
-    // Add the score for this event to the total for this day.
-    summary[dayCounter][athlete] += points;
-  });
-
-  // Store the names on the summary array object.
-  summary.names = names;
-
-  // Make the scores for each day cumulative.
-  Object.keys(names).forEach(function (name) {
-    summary.forEach(function (day, index, summary) {
-      var previousDay;
-
-      // Make sure a score exists for each name.
-      day[name] = day[name] || 0;
-      if (index > 0) {
-        previousDay = summary[index - 1];
-        day[name] += previousDay[name];
-      }
-    });
-  });
-
-  // Override the Array `toString` method with a summary specific method.
-  summary.toString = toSummaryString;
-
-  return summary;
 }
