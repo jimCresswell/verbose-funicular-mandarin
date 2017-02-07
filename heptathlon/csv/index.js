@@ -33,9 +33,6 @@ function parse (csvString, newlineRegex, csvSeparator) {
     .filter((rowString) => rowString.length > 0)
     .map((outcomeString) => getOutcome(outcomeString, csvSeparator));
 
-  // Decorate the data with the points for each event.
-  data = addPoints(data);
-
   // Ensure data in date order.
   data.sort((a, b) => a[fields.date].getTime() - b[fields.date].getTime());
 
@@ -48,8 +45,19 @@ function parse (csvString, newlineRegex, csvSeparator) {
 }
 
 
+/**
+ * Parse event outcome strings into arrays and add points.
+ * @param  {String} outcomeString From row in CSV file.
+ * @param  {String} csvSeparator
+ * @return {Array}               Individual outcome for an Athlete in an event.
+ */
 function getOutcome (outcomeString, csvSeparator) {
   var outcome = outcomeString.split(csvSeparator).map(parseValues);
+
+  var eventAbbreviation = outcome[fields.event];
+  var result = outcome[fields.result];
+  var points = calcPoints(eventAbbreviation, result);
+  outcome[fields.points] = points;
 
   // Convenience method.
   outcome.getDetails = function () {
@@ -61,18 +69,18 @@ function getOutcome (outcomeString, csvSeparator) {
 
 
 /**
- * Given input values taken from a data table of known format parse those values.
+ * Parse string values of known format.
  *
  * @param  {String} value The value taken from the input data table.
  * @param  {Number} index The column in the input data table.
  * @return {String|Number|Date}       The parsed value.
  */
-function parseValues (value, index) {
+function parseValues (value, field) {
   // Remove leading and trailing white space and capitalisation.
   value = value.trim().toLowerCase();
 
-  // Process values, either a single number or minute:second format.
-  if (index === 2) {
+  // Process result values, either a single number or minute:second format.
+  if (field === fields.result) {
     value = value.split(':');
     if (value.length === 2) {
       // Convert minutes and seconds to seconds.
@@ -82,31 +90,12 @@ function parseValues (value, index) {
     }
   }
 
-  // Get date.
-  if (index === 3) {
-    // Time of day not required so discard, ensuring
-    // that Date treats string as UTC.
+  // Time of day not required so discard, ensuring
+  // that Date treats string as UTC.
+  if (field === fields.date) {
     value = new Date(value.split(' ')[0]);
   }
 
+  // For all other fields leave as String.
   return value;
-}
-
-
-/**
- * Return a copy of the data decorated with the points.
- *
- * @param  {Array} data
- * @return {Array} A modified copy of the data object.
- */
-function addPoints (data) {
-  return data.map((row) => {
-    var eventAbbreviation = row[fields.event];
-    var result = row[fields.result];
-    var points = calcPoints(eventAbbreviation, result);
-
-    row.push(points);
-
-    return row;
-  });
 }
