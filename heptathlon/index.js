@@ -14,19 +14,6 @@
 
 /* === Configuration === */
 
-// Determine if called from command line or required
-// as a module, allowing command line functionality
-// to be optional.
-const calledFromCommandLine = (require.main === module);
-
-// Application Configuration data.
-const config = {
-  defaultFilePath: 'heptathlon.csv',
-  newlineRegex: /\n|\r\n|\r/,
-  csvSeparator: ',',
-  outputWidth: 20
-};
-
 const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // CSV field label to index.
@@ -80,6 +67,7 @@ function leftPadDate (dayOfMonth) {
  * @return {String}         A string representation of the summary.
  */
 function formatSummary (summary) {
+  var outputWidth = 20;
   var output = [];
   // Get an array of names.
   var names = Object.keys(summary.names);
@@ -105,7 +93,7 @@ function formatSummary (summary) {
     scores.forEach(function (score) {
       var name = score[0].toUpperCase();
       var points = score[1].toString();
-      var scorePadding = ' '.repeat(config.outputWidth - (name.length + points.length));
+      var scorePadding = ' '.repeat(outputWidth - (name.length + points.length));
       output.push(name + scorePadding + points);
     });
 
@@ -272,51 +260,10 @@ function getSummary (csvString, newlineRegex, csvSeparator) {
 }
 
 
-/**
- * Handle failure to read input data file.
- *
- * Exits process.
- * @param  {Error} err
- * @param  {String} filePath
- */
-function onFileReadError (err, filePath) {
-  console.error('File "' + filePath + '" could not be read, please review the error message:');
-  console.error(err.toString());
-  console.error('Exiting...');
-  process.exit(1);
-}
-
-
-/* === Command line operations. Executed conditionally. === */
-
-if (calledFromCommandLine) {
-  // The conditional require is because of the one
-  // file restriction, I would normally use a
-  // separate module for each piece of functionality.
-  var fs = require('fs');
-
-  // Set input file path from passed parameters
-  // or use default.
-  var filePath = process.argv[2] || config.defaultFilePath;
-
-  // Attempt to read the input file and if sucessful
-  // generate and output the summary.
-  fs.readFile(filePath, 'utf8', (err, csvString) => {
-    if (err) {
-      onFileReadError(err, filePath);
-    } else {
-      var summary = getSummary(csvString, config.newlineRegex, config.csvSeparator);
-      process.stdout.write(summary);
-    }
-  });
-}
-
-
 /* === Expose interface for testing. === */
 
 module.exports = {
   getSummary: getSummary,
-  appConfig: config,
   eventsConfig: eventsConfig,
   calcPoints: calcPoints
 };

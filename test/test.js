@@ -1,6 +1,7 @@
 require('chai').should();
 
-var heptathlon = require('../index.js');
+var heptathlon = require('../heptathlon');
+var config = require('../heptathlon/config');
 
 const inputData = require('./data/inputData');
 const outputData = require('./data/outputData');
@@ -8,7 +9,6 @@ const outputData = require('./data/outputData');
 // Integration test.
 describe('The whole system', function () {
   it('Should map the test input to test output.', function () {
-    const config = heptathlon.appConfig;
     heptathlon.getSummary(inputData, config.newlineRegex, config.csvSeparator).should.equal(outputData);
   });
 });

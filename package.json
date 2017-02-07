@@ -1,8 +1,10 @@
 {
   "name": "verbose-funicular-mandarin",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "private": true,
   "description": "The sky above the port was the color of television, tuned to a dead channel.",
-  "main": "index.js",
+  "main": "./heptathlon/index.js",
+  "bin": {"heptathlon": "./cli.js"},
   "scripts": {
     "test": "mocha"
   },
