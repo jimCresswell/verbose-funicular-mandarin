@@ -1,3 +1,7 @@
+/**
+* Command line utility for calculating heptathlon cummulative scores given known format input.
+*/
+
 var fs = require('fs');
 
 var heptathlon = require('./heptathlon');
